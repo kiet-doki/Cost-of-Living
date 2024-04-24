@@ -1,0 +1,170 @@
+---
+title: "Analyzing the Impact of Education Opportunities on the Cost of Living in Wisconsin Cities"
+author: "Kiet Do"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+```
+
+
+
+# Introduction
+The cost of living can vary significantly across cities, and understanding this variation is crucial for individuals and policymakers. In this report, I will explore the relationship between education opportunities and the cost of living in various cities in Wisconsin.
+
+My primary question is: How does the cost of living vary across different cities in Wisconsin based on education opportunities? I aim to analyze the data to uncover patterns and relationships that provide insights into the factors influencing the cost of living.
+
+Through a comprehensive analysis of education levels and key socio-economic indicators such as poverty rates and median household income, I assert that there exists a meaningful relationship between education level and the cost of living in Wisconsin cities.
+
+
+# Background
+
+The dataset was collected by U.S. Census Bureau. The data was collected through surveys and government records, employing various methods such as interviews, questionnaires, and official documents. These methods ensure a diverse and representative sample of the population.
+
+The dataset includes information on total population, education levels, employment rates, income, poverty rates, and health insurance coverage for several cities in Wisconsin. Given these data fields, I will be able to thoroughly explore the relationship between education opportunities and cost of living. 
+
+Below are the variables included in the dataset which I will use:
+
+- `total_population`: Total population of the city
+- `high_school_or_equivalent`: Percentage of individuals with a high school or equivalent degree
+- `bachelors_degree_or_higher`: Percentage of individuals with a bachelors degree or higher
+- `median_household_income`: Median household income (in dollars) of the city
+- `poverty_rate`: Poverty rate (%) of the city
+
+
+After analyzing the dataset, I have found no unusual factors are observed that would significantly impact the interpretation of the results.
+
+In the following sections, I will conduct a detailed analysis of the data, presenting numerical and graphical summaries to address  my primary question. This includes a linear regression analysis that examines the relationship between the poverty rate (poverty_rate) and the percentage of individuals with a bachelor's degree or higher (bachelors_degree_or_higher).
+
+
+```{r, echo=FALSE}
+city_data = read.csv("combined_data.csv")
+```
+
+
+# Analysis
+
+> Firstly,I want to inspect the education level and poverty rate across different cities in Wisconsin. To do this, I will investigate the percentage of individuals with high school or equivalent degrees, those with bachelor’s degrees or higher, and the poverty rate across the top 10 cities in Wisconsin, based on population size.
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+top_10_cities <- city_data[order(city_data$total_population, decreasing = TRUE), ][1:10, ]
+
+library(tidyr)
+top_10_cities_long <- pivot_longer(top_10_cities, 
+                                   cols = c("poverty_rate", "bachelors_degree_or_higher", "high_school_or_equivalent"), 
+                                   names_to = "education_level", 
+                                   values_to = "percentage")
+
+ggplot(top_10_cities_long, aes(x = city, y = percentage, fill = education_level)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of High School and Bachelor's Degrees (Top 10 Cities by Population)",
+       x = "City",
+       y = "Percentage") +
+  scale_fill_manual(values = c("poverty_rate" = "gray", "bachelors_degree_or_higher" = "green", "high_school_or_equivalent" = "blue")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  # Rotating x-axis labels for better readability
+
+```
+
+The grouped bar chart compares the percentage of individuals with high school or equivalent degrees (in blue), those with bachelor's degrees or higher (in green), and the poverty rate (in gray) across the top 10 cities in Wisconsin, based on population size. Although the high school degree percentages are mostly similar across these cities, the bachelor degree percentages have some noticable differences. The relationship between the bachelors degree percentages and the poverty rates also tell a story. I can see that, for the most part, the cities with higher bachelors degrees tend to have lower poverty rates.
+
+> To further investigate the poverty rates, I continued to research on the median household income of different cities in Wisconsin.
+
+
+```{r, echo=FALSE}
+
+ggplot(city_data, aes(x = median_household_income, y = poverty_rate)) +
+  geom_point(color = "darkred") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Trend line
+  labs(title = "Scatter Plot: Median Household Income vs. Poverty Rate",
+       x = "Median Household Income",
+       y = "Poverty Rate") +
+  theme_minimal()
+
+```
+
+The scatter plot depicts the relationship between median household income and the poverty rate. Each point represents a city, allowing for visual inspection of potential trends. As the median household income increases, the poverty rate tends to decrease, indicating an inverse relationship between median household income and poverty rate.
+
+> We continued  my research by investigating the relationship between percentage of individuals with a bachelor's degree or higher and poverty rate. This is followed by a linear regression model.
+
+```{r, echo=FALSE}
+ggplot(city_data, aes(x = bachelors_degree_or_higher, y = poverty_rate)) +
+  geom_point(color = "darkblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Scatter Plot: Poverty Rate vs. Bachelors Degree or Higher",
+       x = "Percentage of Bachelor's Degree or Higher",
+       y = "Poverty Rate") +
+  theme_minimal()
+```
+
+The scatter plot illustrates a general trend that as the percentage of individuals with a bachelor's degree or higher increases, there is a tendency for the poverty rate to decrease.
+
+```{r, echo = FALSE}
+model_poverty_education <- lm(poverty_rate ~ bachelors_degree_or_higher, data = city_data)
+
+cat("Coefficients:\n",
+    "  Intercept:", coef(model_poverty_education)[1], "\n",
+    "  bachelors_degree_or_higher:", coef(model_poverty_education)[2], "\n\n")
+```
+
+The coefficient for bachelors_degree_or_higher indicates that, on average, a one-unit increase in the percentage of individuals with a bachelor's degree or higher is associated with a decrease of approximately 0.1290 units in the poverty rate.
+
+> After having general idea of the relationship between education level and different factors that affect the cost of living in Wisconsin, Ihave decided to conduct a Hypothesis Testing to strengthen my points. 
+
+##### Hypothesis Testing
+
+- Null Hypothesis (H0): There is no significant correlation between education levels and the cost of living in Wisconsin cities.
+
+- Alternative Hypothesis (Ha): There is a significant correlation between education levels and the cost of living in Wisconsin cities.
+
+
+```{r, echo=FALSE}
+correlation_test = cor.test(city_data$bachelors_degree_or_higher, city_data$median_household_income)
+
+cat("Correlation Test Results:\n",
+    "   Correlation Coefficient:", correlation_test$estimate, "\n",
+    "   Test Statistic:", correlation_test$statistic, "\n",
+    "   Degrees of Freedom:", correlation_test$parameter, "\n",
+    "   P-value:", correlation_test$p.value, "\n")
+
+if (correlation_test$p.value < 0.05) {
+  cat("Conclusion: Reject the null hypothesis. There is a significant correlation.\n")
+} else {
+  cat("Conclusion: Fail to reject the null hypothesis. There is no significant correlation.\n")
+}
+```
+
+This correlation test confirms the hypothesis and relation made in the "Poverty Rate vs. Bachelors Degree or Higher" scatter plot above.
+
+# Discussion
+
+**Broader Interpretations**: My analysis suggests a potential correlation between education levels and the cost of living. Cities with higher education levels may experience lower poverty rates and higher median household incomes.
+
+**Shortcomings**: The analysis is limited by the available variables, and causation cannot be inferred from correlation. Additionally, external factors not included in the dataset may influence the cost of living.
+
+**Future Directions**: A question which I could ask in the future would be what other factors are affecting the cost of living in Wisconsin? Future work could explore additional factors such as local economic policies, infrastructure, and cultural aspects.Adding different visualizations which highlight the different aspects that affect living costs, as well as collecting more granular data on these specific industries could enhance my understanding.
+
+## Conclusions
+
+In conclusion,  my analysis provides valuable insights into the complex relationship between education opportunities and the cost of living in Wisconsin cities. The graphs displayed how education level, specifically, having a four year college education tends to correlate with decreased poverty rates. I also highlighted how higher median household income correlated with lower poverty rates. Furthermore, the higher percentage of people with bachelors degrees relates to lower poverty rates. Given those relationships, I can also conclude that there is a direct relationship between percent of bachelors degrees and median household income. The evidence supports the thesis that education levels play a role in shaping socio-economic indicators.
+
+
+# References
+
+Census Data - Wisconsin Educational Attainment
+^[https://data.census.gov/table/ACSST1Y2022.S1501?g=160XX00US5548000]
+
+Census Data - Quickfacts
+^[https://www.census.gov/quickfacts/fact/table/US/PST045222]
+
+
+
